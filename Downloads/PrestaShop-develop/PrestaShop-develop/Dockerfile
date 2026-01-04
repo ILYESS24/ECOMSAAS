@@ -88,6 +88,13 @@ COPY var/ /var/www/html/var/
 COPY webservice/ /var/www/html/webservice/
 COPY vendor/ /var/www/html/vendor/
 
+# Create auto-redirect for root access
+RUN echo '<?php\n\
+// Auto-redirect to admin panel\n\
+header("Location: /admin/");\n\
+exit;\n\
+?>' > /var/www/html/index_redirect.php
+
 # Create pre-configured parameters.php to skip installation
 RUN mkdir -p /var/www/html/app/config && \
     echo '<?php\n\
@@ -114,9 +121,23 @@ return [\n\
     ],\n\
 ];' > /var/www/html/app/config/parameters.php
 
-# Create .htaccess to redirect /install to /admin
+# Create comprehensive .htaccess redirects
 RUN echo 'RewriteEngine On\n\
-RewriteRule ^install/?$ admin/ [R=302,L]' >> /var/www/html/.htaccess
+\n\
+# Redirect all install-related URLs to admin\n\
+RewriteRule ^install/?$ admin/ [R=302,L]\n\
+RewriteRule ^install-dev/?$ admin/ [R=302,L]\n\
+RewriteRule ^install-dev/(.*)$ admin/ [R=302,L]\n\
+\n\
+# Block direct access to install directory\n\
+RewriteRule ^install/ - [F,L]\n\
+RewriteRule ^install-dev/ - [F,L]\n\
+\n\
+# Prevent access to sensitive files\n\
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|sql|conf)$">\n\
+    Order Allow,Deny\n\
+    Deny from all\n\
+</FilesMatch>' >> /var/www/html/.htaccess
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html
