@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libxml2-dev \
     libicu-dev \
+    libonig-dev \
     unzip \
     && docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install \
