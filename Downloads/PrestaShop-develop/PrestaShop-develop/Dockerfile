@@ -1,14 +1,18 @@
 # PrestaShop Dockerfile for Render
 FROM php:8.1-apache
 
-# Install required PHP extensions
+# Install required system packages and PHP extensions
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libzip-dev \
     libxml2-dev \
     libicu-dev \
+    libonig-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
     unzip \
+    locales \
     && docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install \
         pdo_mysql \
@@ -20,8 +24,23 @@ RUN apt-get update && apt-get install -y \
         xml \
         bcmath \
         opcache \
+        curl \
+        openssl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Configure PHP settings for PrestaShop
+RUN echo "short_open_tag=Off" > /usr/local/etc/php/conf.d/short_open_tag.ini && \
+    echo "memory_limit=256M" > /usr/local/etc/php/conf.d/memory_limit.ini && \
+    echo "max_execution_time=300" > /usr/local/etc/php/conf.d/max_execution_time.ini && \
+    echo "upload_max_filesize=16M" > /usr/local/etc/php/conf.d/upload_max_filesize.ini && \
+    echo "post_max_size=16M" > /usr/local/etc/php/conf.d/post_max_size.ini && \
+    echo "max_input_vars=10000" > /usr/local/etc/php/conf.d/max_input_vars.ini && \
+    echo "date.timezone=Europe/Paris" > /usr/local/etc/php/conf.d/date_timezone.ini
+
+# Configure locales for internationalization
+RUN locale-gen fr_FR.UTF-8 en_US.UTF-8 && \
+    update-locale LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8
 
 # Install Composer
 COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
@@ -41,6 +60,33 @@ COPY . .
 
 # Copy database initialization script
 COPY init-db.sql /docker-entrypoint-initdb.d/
+
+# Ensure all PrestaShop files are copied (including localization data)
+COPY app/ /var/www/html/app/
+COPY bin/ /var/www/html/bin/
+COPY cache/ /var/www/html/cache/
+COPY classes/ /var/www/html/classes/
+COPY config/ /var/www/html/config/
+COPY controllers/ /var/www/html/controllers/
+COPY docs/ /var/www/html/docs/
+COPY download/ /var/www/html/download/
+COPY img/ /var/www/html/img/
+COPY install-dev/ /var/www/html/install-dev/
+COPY js/ /var/www/html/js/
+COPY localization/ /var/www/html/localization/
+COPY mails/ /var/www/html/mails/
+COPY modules/ /var/www/html/modules/
+COPY override/ /var/www/html/override/
+COPY pdf/ /var/www/html/pdf/
+COPY src/ /var/www/html/src/
+COPY tests/ /var/www/html/tests/
+COPY themes/ /var/www/html/themes/
+COPY tools/ /var/www/html/tools/
+COPY translations/ /var/www/html/translations/
+COPY upload/ /var/www/html/upload/
+COPY var/ /var/www/html/var/
+COPY webservice/ /var/www/html/webservice/
+COPY vendor/ /var/www/html/vendor/
 
 # Create pre-configured parameters.php to skip installation
 RUN mkdir -p /var/www/html/app/config && \
