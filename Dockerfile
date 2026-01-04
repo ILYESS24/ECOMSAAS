@@ -33,12 +33,11 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
 
-# Copy and install dependencies
-COPY Downloads/PrestaShop-develop/PrestaShop-develop/composer.json Downloads/PrestaShop-develop/PrestaShop-develop/composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Copy application code first
+COPY Downloads/PrestaShop-develop/PrestaShop-develop ./
 
-# Copy application code
-COPY Downloads/PrestaShop-develop/PrestaShop-develop .
+# Then install dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html
